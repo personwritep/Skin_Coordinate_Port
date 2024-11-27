@@ -332,16 +332,16 @@ function coordinate(){
                 setTimeout(()=>{
                     if(get==1){
                         rewrite_css(); }
-                }, 100); } // 処理までにCSSコード取得のタイミング必要
+                }, 200); } // 処理までにCSSコード取得のタイミング必要
 
             setTimeout(()=>{
                 open_skinselect();
-            }, 200);
+            }, 600);
 
             setTimeout(()=>{
                 editor.disabled=false;
                 editor.style.visibility='visible';
-            }, 1000); }}
+            }, 1500); }}
 
 
     editor.onclick=function(){
@@ -725,7 +725,7 @@ function set_newskin(){
         setTimeout(()=>{
             if(apply){
                 apply.click(); }
-        }, 40); }}
+        }, 200); }}
 
 
 
@@ -737,11 +737,11 @@ function complete(){
         link_Cus.setAttribute('href', 'https://blog.ameba.jp/ucs/editcss/srvcssupdateinput.do?sc');
         setTimeout(()=>{
             link_Cus.click();
-        }, 40); }
+        }, 200); }
     else{
         link_Blg.removeAttribute('target');
         setTimeout(()=>{
             link_Blg.click();
-        }, 40); }}
+        }, 200); }}
 
 
