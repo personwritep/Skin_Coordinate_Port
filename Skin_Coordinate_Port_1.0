@@ -709,10 +709,12 @@ function editcss(){
 
         else if(ua==1){
             css_text.textContent='';
-            alert(
-                "　　❶ 「Ctrl+V」 のキー操作でCSSコードを貼付けます\n\n"+
-                "　　❷ 「保存」 のボタンを押してCSSコードを保存します");
-            css_text.focus(); }}
+
+            setTimeout(()=>{
+                alert(
+                    "　　❶ 「Ctrl+V」 のキー操作でCSSコードを貼付けます\n\n"+
+                    "　　❷ 「保存」 のボタンを押してCSSコードを保存します");
+                css_text.focus(); }, 400); }}
 
 } // editcss()
 
