@@ -2,7 +2,7 @@
 // @name        Skin Coordinate Port
 // @namespace        http://tampermonkey.net/
 // @version        1.2
-// @description        公式スキンをCSS編集用デザインのスキンに移植する
+// @description        公式スキンをCSS編集用デザインのスキンに移植する　「Alt＋F6」
 // @author        Ameba Blog User
 // @match        https://ameblo.jp/*
 // @match        https://blog.ameba.jp/ucs/skin/*
@@ -590,7 +590,7 @@ function user_check(){
     let login_user;
     let blog_user=window.location.pathname.split('/')[1];
     if(blog_user){
-        login_user=document.querySelector('._2j4IoOdR').textContent;
+        login_user=document.querySelector('._5eamczd_').textContent;
         if(login_user){
             if(blog_user==login_user){
                 return true; }}}}
