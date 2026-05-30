@@ -1,0 +1,492 @@
+// ==UserScript==
+// @name         Skin Coordinate Port
+// @namespace    http://tampermonkey.net/
+// @version      0.1
+// @description   公式スキンをCSS編集用デザインのスキンに移植する
+// @author       Ameba Blog User
+// @match       https://ameblo.jp/*
+// @match       https://blog.ameba.jp/ucs/skin/srvskinpreview*
+// @match       https://blog.ameba.jp/ucs/upload/srvimage*
+// @match       https://blog.ameba.jp/ucs/profile/*
+// @match       https://blog.ameba.jp/ucs/sidebar/*
+// @match       https://blog.ameba.jp/ucs/customize/*
+// @match       https://blog.ameba.jp/ucs/skin/*
+// @match       https://blog.ameba.jp/ucs/editcss/*
+// @run-at       document-start
+// @noframes
+// @grant        none
+// ==/UserScript==
+
+
+let ua=0; // Chromeの場合のフラグ
+let agent=window.navigator.userAgent.toLowerCase();
+if(agent.indexOf('firefox') > -1){ ua=1; } // Firefoxの場合のフラグ
+
+let task=0; // メイン ON/OFF
+let skin_code; // ブログスキンのコード名
+let skincss; // ブログスキンのCSS
+let b1e=0; // CSSディスプレイの表示/非表示
+
+
+let target=document.querySelector('head');
+let monitor=new MutationObserver(catch_key);
+monitor.observe(target, { childList: true });
+
+catch_key();
+
+function catch_key(){
+    let sb=document.querySelector('.skinBody'); // 旧タイプスキン
+    let sp=document.querySelector('.skin-page'); // 新タイプスキン
+    if(sb || sp){ // ページ表示エリアの取得が条件
+        document.addEventListener("keydown", check_key);
+        function check_key(event){
+            let gate=-1;
+            if(event.altKey==true){
+                if(event.keyCode==117){
+                    event.preventDefault(); gate=1; }} // ショートカット「Alt＋F6」
+
+            if(gate==1){
+                event.stopImmediatePropagation();
+                event.preventDefault();
+
+                main(); }} // ツールの実効関数
+    }} // catch_key
+
+
+
+function main(){
+    if(task==0){
+        task=1;
+        panel1_disp();
+        coordinate(); }
+    else if(task==1){
+        task=0;
+        panel1_remove();
+    }}
+
+
+
+function panel1_disp(){
+    let panel=document.createElement('div');
+    panel.setAttribute('id', 'panel1');
+
+    panel.innerHTML=
+        '<input id="b1" type="submit" value="Task①">'+
+        '<input id="b2" type="submit" value="Task②">'+
+        '<input id="b3" type="submit" value="Task③">'+
+        '<input id="b4" type="submit" value="Task④">'+
+        '<input id="b5" type="submit" value="Task⑤">'+
+        '<input id="upload" type="submit" value="Upload">'+
+        '<input id="get_css" type="submit" value="GetCSS">'+
+        '<input id="fspace" type="submit" value="FSpace">';
+
+    let css=
+        '#panel1 { position: fixed; bottom: 40px; left: calc(50% - 490px); '+
+        'width: 980px; padding: 15px 0 15px 20px; background: #005f56; '+
+        'border: 2px solid #fff; border-radius: 4px; z-index: 10; }'+
+        '#panel1 input { font: normal 16px meiryo; color: #000; '+
+        'margin-right: 15px; padding: 4px 6px 2px; } '+
+        '#b1, #b2, #b3, #b4, #b5 { outline: none; }';
+
+    if(ua==1){
+        css+='#panel1 input { padding: 4px 5px 2px; }'; }
+
+    let style=document.createElement('style');
+    style.innerHTML=css;
+    panel.appendChild(style);
+
+    let panel1=document.querySelector('#panel1');
+    if(!panel1){
+        document.querySelector('body').appendChild(panel); }} // panel1_disp()
+
+
+
+function panel1_remove(){
+    let panel1=document.querySelector('#panel1');
+    if(panel1){
+        panel1.remove(); }}
+
+
+
+function coordinate(){
+    let b1=document.querySelector('#b1');
+    let b2=document.querySelector('#b2');
+    let b3=document.querySelector('#b3');
+    let b4=document.querySelector('#b4');
+    let b5=document.querySelector('#b5');
+
+    let upload=document.querySelector('#upload');
+    let get_css=document.querySelector('#get_css');
+    let fspace=document.querySelector('#fspace');
+
+    b1.onclick=function(){
+        if(b1e==0){
+            b1e=1;
+            b1.style.boxShadow='0 0 0 2px #2196f3, 0 0 0 4px #fff';
+            open_css(); }
+        else{
+            b1e=0;
+            b1.style.boxShadow='none';
+            hide_css(); }}
+
+    b2.onclick=function(){
+        b2.style.boxShadow='0 0 0 2px #2196f3, 0 0 0 4px #fff';
+        rewrite_css(); }
+
+    b3.onclick=function(){
+        b3.style.boxShadow='0 0 0 2px red, 0 0 0 4px #fff'; }
+
+    b4.onclick=function(){
+        b4.style.boxShadow='0 0 0 2px red, 0 0 0 4px #fff'; }
+
+    b5.onclick=function(){
+        b5.style.boxShadow='0 0 0 2px #2196f3, 0 0 0 4px #fff';
+        check_back(5); }
+
+    upload.onclick=function(){
+        window.open('https://blog.ameba.jp/ucs/upload/srvimagelist.do',
+                    null, 'top=50,left=100,width=800,height=640'); }
+
+    fspace.onclick=function(){
+        window.open('https://blog.ameba.jp/ucs/profile/srvprofileupdateinput.do',
+                    null, 'top=50,left=100,width=800,height=640'); }
+
+} // coordinate()
+
+
+function check_back(n){ ; }
+
+
+
+function open_css(){
+    let page_html=document.querySelector('html');
+    skin_code=page_html.getAttribute('data-skin-code');
+
+    user_css();
+    disp_css(0);
+
+    let xmlhttp=new XMLHttpRequest();
+    xmlhttp.onreadystatechange=function(){
+        if(xmlhttp.readyState==4){
+            if(xmlhttp.status==200){
+                let output=document.getElementById('output');
+                output.innerText=xmlhttp.responseText; }
+            else{
+                alert('status='+ xmlhttp.status); }}}
+
+    let css_url='https://stat100.ameba.jp/p_skin/'+ skin_code +'/css/skin.css';
+
+    xmlhttp.open('GET', css_url );
+    xmlhttp.send(); }
+
+
+function user_css(){
+    if(skin_code.includes('pf_cssedit')){
+        disp_css(2);
+        return 1; } // ページのスキンがCSS編集用デザイン
+    else{
+        return 0; }} // ページのスキンが通常の公式スキン
+
+
+function disp_css(mode){
+    let style;
+    let output=document.createElement('div');
+    if(mode==0){
+        style=
+            'position: fixed; top: 60px; right: 20px; width: 600px; height: 600px; '+
+            'padding: 15px; border: 8px solid #90a4ae; color: #000; background: #fff; '+
+            'font-size: 16px; overflow: scroll; resize: vertical; z-index: 2020;';
+        output.setAttribute('id', 'output'); }
+    if(mode==1 || mode==2){
+        style=
+            'position: fixed; top: 0; right: 20px; width: 600px; color: #fff; '+
+            'padding: 5px 15px 0; border: 8px solid #90a4ae; background: #90a4ae; '+
+            'font-size: 16px; z-index: 2020;';
+        output.setAttribute('id', 'output_s'); }
+    if(mode==1){
+        output.innerHTML=
+            'このページの移植用CSSを作成して クリップボードにコピーしました<br>'+
+            '　▷ サブ画面でスキンをCSS編集用デザインに変更して登録してください'; }
+    if(mode==2){
+        output.innerHTML=
+            '⚪ このページは CSS編集用デザインのスキンを使用しています<br>'+
+            '　　以下は CSS編集用デザインの基本CSSで 移植処理の対象ではありません'; }
+
+    output.setAttribute('style', style)
+
+    if(!document.querySelector('#output')){
+        document.querySelector('html').appendChild(output); }
+    if(!document.querySelector('#output_s')){
+        document.querySelector('html').appendChild(output); }}
+
+
+function hide_css(){
+    if(document.querySelector('#output')){
+        document.querySelector('#output').remove(); }
+    if(document.querySelector('#output_s')){
+        document.querySelector('#output_s').remove(); }}
+
+
+
+function rewrite_css(){
+    if(user_css()==0){
+        let output=document.querySelector('#output')
+        skincss=output.innerText;
+        let rewite_url='https://stat100.ameba.jp/p_skin/'+ skin_code +'/img/';
+        skincss=skincss.replace(/\.\.\/img\//g, rewite_url); //「..img」コードの修正
+
+        let reset_css=[
+            '@charset "utf-8";',
+            '',
+            '/*===========================================',
+            'CSS編集用デザインをスキン移植で利用する場合のリセットコード',
+            '============================================*/',
+            '',
+            '.skinMessageBoard {',
+            'border-top: none;',
+            'border-bottom: none; }',
+            '',
+            '.skinMessageBoard3 { padding: 0; }',
+            '',
+            '.skinArticle {',
+            'padding: 0;',
+            'border: none; }',
+            '',
+            '.skinArticleHeader {',
+            'padding: 0;',
+            'border-left: none; }',
+            '',
+            '.skinArticleFooter {',
+            'border-top: none; }',
+            '',
+            '.skinMenu {',
+            'background: none; }',
+            '',
+            '.skinMenuHeader {',
+            'padding: 0;',
+            'background: none; }',
+            '',
+            '.skinMenuBody {',
+            'margin: 0;',
+            'background: none; }',
+            '',
+            '.skinSubHr,',
+            '.skinSubList li {',
+            'border-bottom: none; }',
+            '',
+            '',
+            '',
+            '',
+            ''].join('\n');
+
+        if(skin_code.includes('wu_pf')){
+            skincss=reset_css + skincss; } // 旧タイプのスキンのみ reset_cssを追加
+
+        output.innerText=skincss;
+        copyClipboard(output.innerText);
+        disp_css(1);
+        open_skinselect(); }
+
+    else{ // CSS編集用デザインのページの場合  直接CSS編集画面を開く
+        let open_url='https://blog.ameba.jp/ucs/editcss/srvcssupdateinput.do';
+        window.open(open_url, null, 'top=0,left=100,width=800,height=940'); }}
+
+
+function open_skinselect(){
+    let type;
+    let layout;
+    let page_html=document.querySelector('html');
+
+    if(skin_code.includes('wu_pf')){ type='wu_pf_cssedit'; } // 旧・新リスト・新標準・新タイル
+    if(skin_code.includes('ur_list_pf')){ type='ur_list_pf_cssedit'; }
+    if(skin_code.includes('ur_std_pf')){ type='ur_std_pf_cssedit'; }
+    if(skin_code.includes('ur_tile_pf')){ type='ur_tile_pf_cssedit'; }
+
+    if(page_html.classList.contains('columnA')){ layout=2;} // ページのカラムレイアウト
+    if(page_html.classList.contains('columnB')){ layout=3;}
+    if(page_html.classList.contains('columnC')){ layout=4;}
+    if(page_html.classList.contains('columnD')){ layout=5;}
+    if(page_html.classList.contains('columnE')){ layout=6;}
+
+    let open_url='https://blog.ameba.jp/ucs/skin/srvskinpreview.do?'+
+        'skin_code='+ type + '&use_layout=' + layout + '&sc'
+
+    window.open(open_url, null, 'top=50,left=100,width=880,height=940'); }
+
+
+
+
+
+
+function copyClipboard(str){ // クリップボードにコピーする関数
+    let tmp_area=document.createElement("textarea");
+    tmp_area.textContent=str;
+    let body=document.getElementsByTagName("body")[0];
+    body.appendChild(tmp_area);
+    tmp_area.select();
+    let retVal=document.execCommand('copy');
+    body.removeChild(tmp_area);
+    return retVal; }
+
+
+
+window.addEventListener('DOMContentLoaded', function(){
+    let profileIndex=document.querySelector('#profileIndex');
+    let editArrange=document.querySelector('#editArrange');
+    let category=document.querySelector('#category');
+    let editCss=document.querySelector('#editCss');
+    let previewDesign=document.querySelector('#previewDesign');
+    let completeMsg=document.querySelector('#completeMsgArea');
+
+    if(profileIndex){ //  フリースペース編集の場合に動作する
+        edit_w();
+        edit_fspace(); }
+    else if(editArrange){ // サイドバーの配置設定の場合に動作する
+        edit_w(); }
+    else if(category){ // デザインの変更の場合に動作する
+        edit_w();
+        edit_skinselect(); }
+    else if(editCss){ // CSSの編集画面の場合に動作する
+        edit_w();
+        editcss(); }
+    else if(previewDesign){ // ブログデザインの確認画面で動作する
+        set_newskin(); }
+    else if(completeMsg){ // デザイン適用確認画面で動作する
+        complete(); }
+});
+
+
+function edit_w(){
+    let css=
+        '#globalHeader, .l-ucs-sidemenu-area, #ucsMainRight, '+
+        'ul.editTools , .infoArea , #footerAd, #globalFooter '+
+        '{ display: none !important; } '+
+        '#ucsContent { max-width: 770px; background: #fff; } '+
+        '#ucsMain { font-size: 16px; background: none; } '+
+        '#ucsMainLeft { width: 740px !important; } '+
+        '.moreLink a { font-weight: bold; color: #000; } '+
+        '.textInputArea .textarea1 { width: 715px !important; height: 320px; '+
+        'font-size: 16px; } .limText { margin: 0; } '+
+        'html { overflow-y: scroll !important; } '+
+        '#editCss #notes { font-size: 15px; } '+
+        '#editCss #myframe { display: none; } '+
+        '#editCss #contentsForm textarea { width: 720px !important; '+
+        'height: 510px; } '+
+        '#editCss .actionControl .msg { margin: -30px 0 10px; } ';
+
+    let style=document.createElement('style');
+    style.setAttribute('id', 'edit_w');
+    style.innerHTML=css;
+
+    let edit_w=document.querySelector('#edit_w');
+    if(!edit_w){
+        document.querySelector('html').appendChild(style); }
+} // edit_w()
+
+
+function edit_fspace(){
+    let morelink=document.querySelector('.moreLink a');
+    if(morelink){
+        let url='https://blog.ameba.jp/ucs/sidebar/srvsidebarupdateinput.do'
+
+        morelink.onclick=function(event){
+            event.preventDefault();
+            window.open(url, '_blank', 'top=120,left=100,width=800,height=640'); }}
+} // edit_fspace()
+
+
+
+function edit_skinselect(){
+    let ucsContent=document.querySelector('#ucsContent');
+    ucsContent.style.maxWidth='840px';
+
+    let query=location.href.toString().slice(-3);
+    if(query=='&sc'){
+        let cthum=document.querySelectorAll('img.confirmThumb');
+        setTimeout(()=>{
+            for(let k=0; k<cthum.length; k++){
+                let alt=cthum[k].getAttribute('alt');
+                if(alt=='CSS編集用デザイン'){
+                    cthum[k].style.outline='2px solid red';
+                    cthum[k].style.outlineOffset='-2px';
+                    cthum[k].scrollIntoView({block: 'center'});
+                }}}, 400);
+    }} // edit_skinselect()
+
+
+function editcss(){
+    let myUcsPage=document.querySelector('#myUcsPage');
+
+    myUcsPage.innerHTML=
+        '<input id="c1" type="submit" value="デザイン設定">'+
+        '<input id="c2" type="submit" value="ブログ画面">';
+
+    let css=
+        '#ucsHeader { display: block !important; text-align: center; }'+
+        '#ucsHeader input { font: normal 14px meiryo; color: #000; '+
+        'margin-left: 40px; padding: 2px 12px 0; } '+
+        '#ucsSubMenu { top: 3px !important; } '+
+        '#myUcsPage { display: flex !important; }'+
+        '#ucsHeader li:not(:first-child){ visibility: hidden; }';
+
+    let style=document.createElement('style');
+    style.innerHTML=css;
+    myUcsPage.appendChild(style);
+
+    let c1=document.querySelector('#c1');
+    let c2=document.querySelector('#c2');
+    let my_blog=document.querySelector('#ucsSubMenu li:last-child a');
+    c1.onclick=function(){
+        let open_url='https://blog.ameba.jp/ucs/skin/skinselecttop.do';
+        window.open(open_url, '_blank', ); }
+    c2.onclick=function(){
+        my_blog.click(); }
+
+    let query=location.href.toString().slice(-3); // 自動処理でCSS編集を開いた場合
+    if(query=='?sc'){
+        let css_text=document.querySelector('#contentsForm textarea');
+        css_text.select(); } // コードを全選択にする
+} // editcss()
+
+
+/*
+    let actionControl=document.querySelector('#contentsForm .actionControl');
+
+    let button=document.createElement('input');
+    button.setAttribute('id', 'delete_b');
+    button.setAttribute('name', 'clear');
+    button.setAttribute('class', 'btnPrimary');
+    button.setAttribute('type', 'submit');
+    button.setAttribute('value', 'コードの全削除');
+    button.style.background='#5fa7c7';
+    button.style.borderColor='#89c1ec';
+
+    let delete_b=document.querySelector('#delete_b');
+    if(!delete_b){
+        myUcsPage.appendChild(button); }
+
+
+    delete_b.addEventListener('click', function(event){
+         event.stopImmediatePropagation();
+        css_text.value='';
+    });
+*/
+
+
+
+function set_newskin(){
+    let apply=document.querySelector('#sbmtBtn input[name="applyBtn"]');
+    setTimeout(()=>{
+        if(apply){
+            apply.click(); }
+    }, 400); }
+
+
+function complete(){
+    let cssCustom=document.querySelector('.cssCustomBtn');
+    let link=document.querySelector('.cssCustomBtn a');
+    link.setAttribute('href', 'https://blog.ameba.jp/ucs/editcss/srvcssupdateinput.do?sc');
+    setTimeout(()=>{
+        if(cssCustom){
+            link.click(); }
+    }, 400); }
